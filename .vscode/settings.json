@@ -1,6 +1,3 @@
 {
-    "python.analysis.extraPaths": [
-        "./lms_project"
-    ],
     "python-envs.defaultEnvManager": "ms-python.python:pipenv"
 }
