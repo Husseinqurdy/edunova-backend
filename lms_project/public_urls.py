@@ -1,4 +1,3 @@
-# lms_project/public_urls.py
 from django.urls import path
 from .views import (
     AuditLogView,
@@ -9,45 +8,58 @@ from .views import (
     SuperAdminInstitutionListView,
     SuperAdminStatsView,
     SuperAdminAnalyticsView,
-    RenewInstitutionView, 
+    RenewInstitutionView,
     InstitutionDeleteView,
     RegisterInstitutionView,
     SendNotificationView,
     TenantListView,
     SystemSettingsView,
     JWTPreviewView,
-    ClientNotificationView, 
+    ClientNotificationView,
     MarkNotificationReadView,
     ToggleInstitutionStatusView,
     zenopay_webhook,
+    SignupView,
+    LoginView,
+    SuperAdminSignupView,
+    TenantLoginView,
+    ClientInstitutionListView,
+    InstitutionInfoView,
 )
 
 urlpatterns = [
-    path('register-institution/', RegisterInstitutionView.as_view()),
-    path("institutions/", SuperAdminInstitutionListView.as_view(), name="superadmin-institution-list"),
-    path("analytics/", SuperAdminAnalyticsView.as_view()),
-    path("stats/", SuperAdminStatsView.as_view()),
-    path("institutions/<int:pk>/renew/", RenewInstitutionView.as_view()),
-    path("institutions/<int:pk>/", InstitutionDeleteView.as_view()),
-    path("audit-logs/", AuditLogView.as_view()),
-    path("send-notification/", SendNotificationView.as_view()),
-    path("tenants/", TenantListView.as_view()),
-    path("settings/", SystemSettingsView.as_view()),
-    path("jwt-preview/", JWTPreviewView.as_view()),
-    path("notifications/", ClientNotificationView.as_view(), name="client-notifications"),
-    path("notifications/<int:pk>/read/", MarkNotificationReadView.as_view(), name="mark-notification-read"),
-    path("profile/", ProfileView.as_view(), name="tenant-profile"),
-    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
-    path("institution/<str:schema_name>/toggle/", ToggleInstitutionStatusView.as_view()),
-    path("payments/institution/<str:schema_name>/initiate-payment/", InitiatePaymentView.as_view()),
-    path("zenopay/webhook/", zenopay_webhook),
-    path("order/institution/<str:schema_name>/credentials/", GetInstitutionCredentialsView.as_view(), name="get-institution-credentials"),
+    # ── Auth ──────────────────────────────
+    path('auth/signup/', SignupView.as_view()),
+    path('auth/login/', LoginView.as_view()),
+    path('auth/tenant/login/', TenantLoginView.as_view()),
+    path('superadmin/create-superadmin/', SuperAdminSignupView.as_view()),
 
+    # ── Client ────────────────────────────
+    path('client/register-institution/', RegisterInstitutionView.as_view()),
+    path('client/institution/', ClientInstitutionListView.as_view()),
+    path('client/institution/delete/', InstitutionDeleteView.as_view()),
+    path('client/profile/', ProfileView.as_view()),
+    path('client/change-password/', ChangePasswordView.as_view()),
+    path('client/notifications/', ClientNotificationView.as_view()),
+    path('client/notifications/mark-read/', MarkNotificationReadView.as_view()),
 
+    # ── Tenant info ───────────────────────
+    path('tenant/institution-info/', InstitutionInfoView.as_view()),
+
+    # ── Superadmin ────────────────────────
+    path('superadmin/stats/', SuperAdminStatsView.as_view()),
+    path('superadmin/institutions/', SuperAdminInstitutionListView.as_view()),
+    path('superadmin/analytics/', SuperAdminAnalyticsView.as_view()),
+    path('superadmin/send-notification/', SendNotificationView.as_view()),
+    path('superadmin/institution/<str:schema_name>/toggle/', ToggleInstitutionStatusView.as_view()),
+    path('superadmin/payments/institution/<str:schema_name>/initiate-payment/', InitiatePaymentView.as_view()),
+    path('superadmin/order/institution/<str:schema_name>/credentials/', GetInstitutionCredentialsView.as_view()),
+    path('superadmin/institutions/<int:pk>/renew/', RenewInstitutionView.as_view()),
+    path('superadmin/institutions/<int:pk>/', InstitutionDeleteView.as_view()),
+
+    # ── Misc ──────────────────────────────
+    path('audit-logs/', AuditLogView.as_view()),
+    path('tenants/', TenantListView.as_view()),
+    path('settings/', SystemSettingsView.as_view()),
+    path('zenopay/webhook/', zenopay_webhook),
 ]
-
-
- 
-
-
-    
