@@ -185,6 +185,7 @@ class InstitutionInfoView(APIView):
 
 
 class TenantLoginView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         reg_number = request.data.get("registration_number")
         password = request.data.get("password")
@@ -242,7 +243,14 @@ class SignupView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save(role='client')
-            return Response({"message": "Client registered successfully"}, status=status.HTTP_201_CREATED)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "message": "Client registered successfully",
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "role": user.role,
+                "username": user.username,
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # 🔐 Signup for SuperAdmin
@@ -259,6 +267,7 @@ class SuperAdminSignupView(generics.CreateAPIView):
 
 
 class LoginView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
