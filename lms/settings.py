@@ -22,6 +22,13 @@ PUBLIC_SCHEMA_NAME = "public"
 TENANT_URLCONF = "lms_project.tenant_urls"
 PUBLIC_SCHEMA_URLCONF = "lms.urls"
 
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'localhost')}",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+
 SHARED_APPS = [
     'django_tenants',
     'lms_project',
