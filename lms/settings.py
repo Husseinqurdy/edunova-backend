@@ -10,7 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key-change-in-production")
 DEBUG = os.getenv("DEBUG", "True") == "True"
-ALLOWED_HOSTS = ["*"]
+
+RAILWAY_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+ALLOWED_HOSTS = ["*"]  # Keep open — django-tenants needs wildcard
+if RAILWAY_DOMAIN:
+    ALLOWED_HOSTS = ["*", RAILWAY_DOMAIN, f"*.{RAILWAY_DOMAIN}", "localhost", "127.0.0.1"]
 
 TENANT_MODEL = "lms_project.Institution"
 TENANT_DOMAIN_MODEL = "lms_project.Domain"
@@ -149,7 +153,7 @@ else:
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     MEDIA_ROOT = BASE_DIR / 'media'
 
-# CORS - allow all origins in dev, restrict in production
+# CORS - allow Railway and Netlify
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
@@ -160,6 +164,9 @@ CORS_ALLOW_HEADERS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 ZENOPAY_API_KEY = os.getenv("ZENOPAY_API_KEY", "")
+
+# Railway
+PORT = os.getenv("PORT", "8000")
 
 # Railway specific
 PORT = os.getenv("PORT", "8000")
