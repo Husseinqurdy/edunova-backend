@@ -37,7 +37,10 @@ def provision_tenant(data, client_user=None):
             raise ValueError("Missing or invalid domain in request data")
 
         domain_value = raw_domain.strip().lower()
-        if not domain_value.endswith(".localhost"):
+        # Only add .localhost in local development, not in production
+        import os
+        is_local = os.getenv('RAILWAY_PUBLIC_DOMAIN', '') == ''
+        if is_local and not domain_value.endswith(".localhost"):
             domain_value = f"{domain_value}.localhost"
 
         # ✅ Check if domain already exists (avoid duplicate crash)
