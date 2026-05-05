@@ -62,50 +62,44 @@ class RegisterInstitutionView(APIView):
             client_user = request.user
             plan = serializer.validated_data.get("plan")
 
-            with schema_context("public"):
-                # ✅ Provision tenant
-                institution, login_user = provision_tenant(serializer.validated_data, client_user)
+            try:
+                with schema_context("public"):
+                    institution, login_user = provision_tenant(serializer.validated_data, client_user)
 
-                # ✅ Apply subscription logic
-                if plan == "free":
-                    institution.is_active = True
-                    institution.paid_until = timezone.now().date() + timedelta(days=14)
-                else:  # premium
-                    institution.is_active = False
-                    institution.paid_until = None
+                    if plan == "free":
+                        institution.is_active = True
+                        institution.paid_until = timezone.now().date() + timedelta(days=14)
+                    else:
+                        institution.is_active = False
+                        institution.paid_until = None
 
-                institution.save()
+                    institution.save()
 
-            # ✅ Response based on plan
-            response_data = {
-                "message": f"Institution '{institution.name}' registered successfully.",
-                "subdomain": request.data["domain"]
-            }
-
-            if plan == "free":
-                response_data["admin_login"] = {
-                    "reg_number": institution.registration_number,
-                    "default_password": "admin"
+                response_data = {
+                    "message": f"Institution '{institution.name}' registered successfully.",
+                    "subdomain": request.data.get("domain", ""),
+                    "institution_name": institution.name,
+                    "registration_number": institution.registration_number,
+                    "password": "admin",
                 }
-            else:
-                # ✅ For premium, initiate payment and return order_id only
-                buyer_phone = request.data.get("buyer_phone", "0700000000")
-                payment_response = initiate_zenopay_payment(institution, buyer_phone)
 
-                if payment_response.get("status_code") == 200:
-                    with schema_context("public"):
-                        institution.payment_order_id = payment_response.get("order_id")
-                        institution.save()
+                if plan == "premium":
+                    buyer_phone = request.data.get("buyer_phone", "0700000000")
+                    payment_response = initiate_zenopay_payment(institution, buyer_phone)
+                    if payment_response.get("status_code") == 200:
+                        with schema_context("public"):
+                            institution.payment_order_id = payment_response.get("order_id")
+                            institution.save()
+                        response_data["order_id"] = payment_response.get("order_id")
+                    else:
+                        return Response({"error": "Failed to initiate payment", "details": payment_response}, status=500)
 
-                    response_data["order_id"] = payment_response.get("order_id")
-                    response_data["payment_message"] = payment_response.get("message")
-                else:
-                    return Response({
-                        "error": "Failed to initiate payment",
-                        "details": payment_response
-                    }, status=500)
+                return Response(response_data, status=status.HTTP_201_CREATED)
 
-            return Response(response_data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
