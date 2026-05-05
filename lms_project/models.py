@@ -1,7 +1,6 @@
 from django.db import models
 from django_tenants.models import TenantMixin, DomainMixin
 from django.utils import timezone
-from auditlog.registry import auditlog
 from django.contrib.auth import get_user_model
 
 
@@ -21,11 +20,10 @@ class Institution(TenantMixin):
         default='free'
     )
 
-    # ✅ Replaced ForeignKey with safe references
     owner_email = models.EmailField(blank=True, null=True)
     owner_registration_number = models.CharField(max_length=20, blank=True, null=True)
 
-    paid_until = models.DateField(null=True, blank=True)  # 🕒 tarehe ya mwisho ya subscription
+    paid_until = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=False)
     payment_order_id = models.CharField(max_length=100, null=True, blank=True)
 
@@ -42,10 +40,6 @@ class Domain(DomainMixin):
         related_name='domains'
     )
 
-auditlog.register(Institution)
-
-
-
 
 User = get_user_model()
 
@@ -57,11 +51,11 @@ class SystemNotification(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.urgency})"
-    
+
 
 class NotificationReadStatus(models.Model):
     notification = models.ForeignKey(SystemNotification, on_delete=models.CASCADE)
-    user_email = models.EmailField()  # ✅ Safe reference
+    user_email = models.EmailField()
     read_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
