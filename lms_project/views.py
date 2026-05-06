@@ -169,9 +169,14 @@ class UpdateInstitutionView(APIView):
 
 
 class InstitutionInfoView(APIView):
+    permission_classes = [AllowAny]
     def get(self, request):
         try:
-            institution = Institution.objects.get(schema_name=request.tenant.schema_name)
+            # Accept schema_name from query param (path-based routing)
+            schema_name = request.query_params.get('schema') or getattr(request.tenant, 'schema_name', None)
+            if not schema_name or schema_name == 'public':
+                return Response({"error": "Schema name required."}, status=400)
+            institution = Institution.objects.get(schema_name=schema_name)
             serializer = InstitutionPublicSerializer(institution, context={"request": request})
             return Response(serializer.data, status=200)
         except Institution.DoesNotExist:
@@ -183,47 +188,42 @@ class TenantLoginView(APIView):
     def post(self, request):
         reg_number = request.data.get("registration_number")
         password = request.data.get("password")
+        schema_name = request.data.get("schema_name")
 
         if not reg_number or not password:
             return Response({"error": "Registration number and password required."}, status=400)
 
-        print("🔍 Current schema:", connection.schema_name)
+        if not schema_name:
+            return Response({"error": "schema_name is required."}, status=400)
 
-        if connection.schema_name == "public":
-            return Response({"error": "Login must happen within a tenant subdomain."}, status=403)
+        try:
+            with schema_context(schema_name):
+                user = authenticate(request, registration_number=reg_number, password=password)
 
-        with schema_context(connection.schema_name):
-            user = authenticate(request, registration_number=reg_number, password=password)
+                if not user:
+                    # Try direct lookup as fallback
+                    try:
+                        user_obj = User.objects.get(registration_number=reg_number)
+                        if user_obj.check_password(password):
+                            user = user_obj
+                    except User.DoesNotExist:
+                        pass
 
-            if not user and password == "admin":
-                try:
-                    user = User.objects.get(registration_number=reg_number, role="client")
-                    if not user.check_password("admin"):
-                        return Response({"error": "Invalid credentials."}, status=401)
-                except User.DoesNotExist:
+                if not user:
                     return Response({"error": "Invalid credentials."}, status=401)
 
-            if not user:
-                return Response({"error": "Invalid credentials."}, status=401)
+                refresh = RefreshToken.for_user(user)
 
-            refresh = RefreshToken.for_user(user)
-            access_token = str(refresh.access_token)
+                return Response({
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "role": user.role,
+                    "username": f"{user.firstname} {user.surname}".strip() if hasattr(user, 'firstname') else user.registration_number,
+                    "registration_number": user.registration_number,
+                }, status=200)
 
-            role = user.role
-            hostname = request.get_host().split(":")[0]
-            dashboard_map = {
-                "client": f"http://{hostname}:5173/admin/dashboard",
-                "instructor": f"http://{hostname}:5173/instructor/dashboard",
-                "student": f"http://{hostname}:5173/student/dashboard",
-            }
-            dashboard_url = dashboard_map.get(role, f"http://{hostname}:5173/unknown-role")
-
-            return Response({
-                "access": access_token,
-                "refresh": str(refresh),
-                "role": role,
-                "dashboard": dashboard_url
-            }, status=200)
+        except Exception as e:
+            return Response({"error": f"Login failed: {str(e)}"}, status=500)
         
 
 User = get_user_model()
