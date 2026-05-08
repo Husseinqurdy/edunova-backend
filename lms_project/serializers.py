@@ -29,8 +29,9 @@ class InstitutionSerializer(serializers.ModelSerializer):
         model = Institution
         fields = [
             'name', 'schema_name', 'location', 'contacts', 'website',
-            'plan', 'paid_until', 'logo_url',
-            'owner_email', 'owner_registration_number'  # ✅ Added
+            'plan', 'paid_until', 'logo_url', 'is_active',
+            'registration_number',
+            'owner_email', 'owner_registration_number'
         ]
 
     def get_logo_url(self, obj):

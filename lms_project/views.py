@@ -186,9 +186,9 @@ class InstitutionInfoView(APIView):
 class TenantLoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
-        reg_number = request.data.get("registration_number")
-        password = request.data.get("password")
-        schema_name = request.data.get("schema_name")
+        reg_number = request.data.get("registration_number", "").strip().upper()
+        password = request.data.get("password", "").strip()
+        schema_name = request.data.get("schema_name", "").strip()
 
         if not reg_number or not password:
             return Response({"error": "Registration number and password required."}, status=400)
@@ -198,31 +198,36 @@ class TenantLoginView(APIView):
 
         try:
             with schema_context(schema_name):
-                user = authenticate(request, registration_number=reg_number, password=password)
+                # Direct lookup by registration_number
+                try:
+                    user = User.objects.get(registration_number=reg_number)
+                except User.DoesNotExist:
+                    return Response({"error": "Invalid registration number."}, status=401)
 
-                if not user:
-                    # Try direct lookup as fallback
-                    try:
-                        user_obj = User.objects.get(registration_number=reg_number)
-                        if user_obj.check_password(password):
-                            user = user_obj
-                    except User.DoesNotExist:
-                        pass
+                if not user.check_password(password):
+                    return Response({"error": "Invalid password."}, status=401)
 
-                if not user:
-                    return Response({"error": "Invalid credentials."}, status=401)
+                if not user.is_active:
+                    return Response({"error": "Account is disabled."}, status=403)
 
                 refresh = RefreshToken.for_user(user)
+
+                # Get display name
+                firstname = getattr(user, 'firstname', '') or ''
+                surname = getattr(user, 'surname', '') or ''
+                display_name = f"{firstname} {surname}".strip() or user.registration_number
 
                 return Response({
                     "access": str(refresh.access_token),
                     "refresh": str(refresh),
                     "role": user.role,
-                    "username": f"{user.firstname} {user.surname}".strip() if hasattr(user, 'firstname') else user.registration_number,
+                    "username": display_name,
                     "registration_number": user.registration_number,
                 }, status=200)
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({"error": f"Login failed: {str(e)}"}, status=500)
         
 
